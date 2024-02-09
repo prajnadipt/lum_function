@@ -1,4 +1,9 @@
-#%%
+''' This code calculates the UV LF using semi-analytical techniques as given by Ferrara et al. 2023. Further, it is extended to calculate the 
+IR Luminosity function. The calculated IR luminosity function does not agree with the present observations due to the presence of dark UV galaxies. A
+simple prescription to calculate the number density of such sources is provided in the code.'''
+
+''' This code was written by Prajnadipt Ghosh (me) as part of my 5-month-long MS Thesis under the supervision of Prof. Andrea Ferrara and 
+Dr. Laura Sommovigo'''
 import matplotlib.pyplot as plt
 import scipy.integrate as spy
 import numpy as np
@@ -8,7 +13,7 @@ from scipy.optimize import fsolve
 from scipy import optimize
 import sympy as sym
 
-#%%
+
 # Constants from PLANCK collaboration
 omega_m = 0.3075
 omega_l = 1-omega_m
@@ -25,11 +30,10 @@ def find_nearest(array, value):                                   # Returns inde
     idx = (np.abs(array - value)).argmin()
     return idx
 
-#%%
 # Input redshift here
-z = 7 #int(input("input redshift:\n"))
+z = int(input("input redshift:\n"))
 
-#%%
+
 # Calling the HMF as Sheth and Tormen ellipsoidal pertrubation model - Library by Steven Murray
 mf = MassFunction(z=z,transfer_model="BBKS", hmf_model="ST",Mmin = 10, Mmax = 14,dlog10m= 0.01)
 
@@ -51,12 +55,12 @@ f_w = 0.1
 v_s = 975 # km/s
 
 
-# Halo circular velocity from Pratika et al Review https://arxiv.org/pdf/1809.09136.pdf (in km/s)
+# Halo circular velocity from Pratika et al. Review https://arxiv.org/pdf/1809.09136.pdf (in km/s)
 def v_c(m,z):
     	return (23.4 * (m/(1e8))**(1.0/3.0) * ((1+z)/10)**(1.0/2.0))
     	
     
-# Star Formation Efficiency including the feedback given by Pratika et al https://arxiv.org/pdf/1405.4862.pdf
+# Star Formation Efficiency including the feedback given by Pratika et al. https://arxiv.org/pdf/1405.4862.pdf
 def e_s(m,z):
     	return e_0 * (v_c(m,z)**2.0) / (v_c(m,z)**2.0 + (f_w * v_s**2.0))
     
@@ -66,7 +70,7 @@ def sfr(m,z):
     	return 22.7 * (e_s(m,z)/0.01) * ((1+z)/8.0)**(3.0/2.0) * m/1e12
    
    
-# Model: model for effective optical depth from Ferrara et al 2022  
+# Model: a model for effective optical depth from Ferrara et al. 2023
 if z >= 10:   
 	def tau_eff(m,z):
     		return 0.7 + 0.0164 * (sfr(m,z)/10)**(1.45)
@@ -83,7 +87,7 @@ def luv1(m,z):
     	return sfr(m,z) * Kuv
     
 
-# Effect of dust on Apparent Magnitude depending on the effective optical depth: Ferrara et al 2022
+# Effect of dust on Apparent Magnitude depending on the effective optical depth: Ferrara et al. 2022
 def muv(m,z):
     	return -2.5 * np.log10(luv1(m,z)) + 5.89 + 1.087 * tau_eff(m,z)
 
@@ -100,7 +104,7 @@ def dmuvdM1(m,z):
 	a = 0.000000001*m
 	return np.abs((-muv1(m-3*a,z)+9*muv1(m-2*a,z) - 45*muv1(m-a,z) + 45*muv1(m+a,z) - 9*muv1(m+2*a,z) +muv1(m+3*a,z))/(60*a))
     
-# Phi_uv using Simple Chain rule as done by Ferrara et al 2022
+# Ferrara et al. 2023 UV Luminosity function
 def phi_uv(m,z):
 	phiuv = hmf1(m,z)/(dmuvdM(m,z))/h**4
 	return phiuv
@@ -111,8 +115,7 @@ def phi_uvnd(m,z):
 plt.plot(muv(m,z),dmuvdM(m,z))
 plt.show()
     	
-#%%
-# Chain rule does not works in a simple manner when transformation is non monotonic in nature, we use a different chain rule, for calculating that
+# Chain rule does not work in a simple manner when the transformation is nonmonotonic in nature; we use a different chain rule for calculating that
 # Plotting phi_luv as a function of Luv
 
 def dluvdM(m,z):
@@ -331,7 +334,7 @@ plt.show()
 
 
 
-#%%
+
 # Obscured fraction
 def fobs(m,z):
     	return (1-np.exp(-tau_eff(m,z)))
@@ -445,31 +448,6 @@ data16 = np.loadtxt("schechter_ir_4.txt",delimiter = ",")
 b16 = data16[:,0]
 a16 = data16[:,1]
 
-#%%
-#read csv files
-datan = np.loadtxt("Prajna_data.txt",delimiter = ",")
-# Generating some random data
-xs = datan[:,3]
-ys = datan[:,0]
-ys1 = datan[:,1:2].T
-colors = datan[:,4]
-
-ys2 = np.polyfit(xs,ys,1)
-print(ys2)
-
-xs2 = np.linspace(-24,-18)
-ys3 =  ys2[1] + ys2[0]*xs2 
-#plt.plot(xs2,ys3,color="red",linewidth =2.0)
-plt.figure(figsize=(10,8))
-# Creating a scatter plot with different colors with error bars on y-axis of ys1
-#plt.scatter(xs, ys, c=colors)
-
-
-# plot points with colorbar and errorbar
-sct = plt.scatter(xs, ys, c=colors, cmap='viridis',s=50, zorder = 1)
-_, __ , errorlinecollection = plt.errorbar(xs, ys,yerr = ys1, ls = '', zorder = 0,ecolor='k',capsize=2,elinewidth=0.7)
-# Adding a color bar
-plt.colorbar(sct)
 
 plt.plot(muv1(m,z),np.log10(lir(m,z)),color="purple",linewidth =2.0)
 plt.plot(muv1(m,z),np.log10(lir2(m,z)),color="green",linewidth =2.0,ls = '--')
@@ -485,7 +463,6 @@ plt.tick_params(which='both', length=10, width=1, colors='k', labelsize='18', pa
 plt.legend(["REBELS Det","Relation-1","Relation-2","Relation-3"],loc='upper right',fontsize=18)
 plt.show()
 
-#%%
 f1 = plt.figure(figsize=(7,7))
 ax1 = f1.add_subplot(111)
 ax1.yaxis.set_ticks_position('both')
@@ -539,7 +516,7 @@ plt.tick_params(which='both', length=10, width=1, colors='k', labelsize='18', pa
 plt.show()
 
 #%%
-# at z=7: Defining phi_star , number of missing galaxies from our theory
+# at z=7: Defining phi_star, the number of missing galaxies from our theory
 from scipy.interpolate import make_interp_spline, BSpline
 Lir = lir(m,z)
 def f_ir(Lir,z):
